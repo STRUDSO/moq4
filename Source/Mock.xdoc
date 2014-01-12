@@ -158,4 +158,16 @@
 		<typeparam name="TReturn">The type to define the default.</typeparam>
 		<param name="value">The default value.</param>
 	</doc>
+	<doc for="Mock.SetReturnDefault{provider1}">
+		<summary>
+			Defines the default value to return in all mocked methods or properties by calling a delegate.
+		</summary>
+		<param name="provider">The delegate to be called to define the default.</param>
+	</doc> 
+  <doc for="Mock.SetReturnDefault{provider2}">
+		<summary>
+			Defines the default value to return in all mocked methods or properties by calling a delegate, optionally can delegate back to moq by calling first parameter()
+		</summary>
+    <param name="provider">The delegate to be called to define the default.</param>
+	</doc>  
 </docs>

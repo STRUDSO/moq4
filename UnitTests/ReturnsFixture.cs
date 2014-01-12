@@ -5,7 +5,98 @@ using System.Collections.Generic;
 
 namespace Moq.Tests
 {
-	public class ReturnsFixture
+    public class SetReturnsDefaultFixture
+    {
+        [Fact]
+        public void ReturnsDefaultValueType()
+        {
+            var mock = new Mock<IFoo>();
+            mock.SetReturnsDefault(true);
+
+            Assert.Equal(true, mock.Object.ReturnBool());
+        }
+
+        [Fact]
+        public void ReturnsDefaultReferenceValue()
+        {
+            var mock = new Mock<IFoo>();
+            mock.SetReturnsDefault<IList<int>>(new List<int>());
+
+            Assert.NotNull(mock.Object.ReturnIntList());
+        }
+
+        [Fact]
+        public void ReturnsDefaultValueOnProperty()
+        {
+            var mock = new Mock<IFoo>();
+            mock.SetReturnsDefault(int.MinValue);
+
+            Assert.Equal(int.MinValue, mock.Object.Value);
+        }
+
+        [Fact]
+        public void SetReturnsDefaultFuncUseDefaultValue()
+        {
+            int anyInt = new Random().Next();
+            var mock = new Mock<IFoo>();
+
+            mock.SetReturnsDefault((func, type) => anyInt);
+
+            Assert.Equal(anyInt, mock.Object.Value);
+        }
+
+        [Fact]
+        public void SetReturnsDefaultFuncUseTypeToCreateValue()
+        {
+            var mock = new Mock<IFoo>();
+
+            mock.SetReturnsDefault((func, type) => Activator.CreateInstance(type));
+
+            Assert.Equal(default(bool), mock.Object.ReturnBool());
+        }
+
+        [Fact]
+        public void SetReturnsDefaultFuncUseEmptyDefaultValueProvider()
+        {
+            var mock = new Mock<IFoo>();
+
+            mock.SetReturnsDefault((func, type) => func());
+
+            Assert.Equal(default(int), mock.Object.Value);
+        }
+
+        [Fact]
+        public void SetReturnsDefaultFuncCalled()
+        {
+            var mock = new Mock<IFoo>();
+
+            mock.SetReturnsDefault(type => { throw new Exception("Boom!"); });
+
+            Assert.Throws<Exception>(() => mock.Object.Value);
+        }
+
+
+        [Fact]
+        public void SetReturnsDefaultFuncOverride()
+        {
+            var mock = new Mock<IFoo>();
+            mock.SetReturnsDefault(type => int.MaxValue);
+
+            var value = mock.ProvideDefault(typeof(IFoo).GetProperty("Value").GetGetMethod(), false, new EmptyDefaultValueProvider());
+
+            Assert.Equal(default(int), value);
+        }
+
+        public interface IFoo
+        {
+            bool ReturnBool();
+            IList<int> ReturnIntList();
+
+            int Value { get; set; }
+        }
+    }
+
+    public class ReturnsFixture
 	{
 #if !SILVERLIGHT
 		[Fact]
@@ -186,33 +277,6 @@ namespace Moq.Tests
 		}
 
 		[Fact]
-		public void ReturnsDefaultValueType()
-		{
-			var mock = new Mock<IFoo>();
-			mock.SetReturnsDefault(true);
-
-			Assert.Equal(true, mock.Object.ReturnBool());
-		}
-
-		[Fact]
-		public void ReturnsDefaultReferenceValue()
-		{
-			var mock = new Mock<IFoo>();
-			mock.SetReturnsDefault<IList<int>>(new List<int>());
-
-			Assert.NotNull(mock.Object.ReturnIntList());
-		}
-
-		[Fact]
-		public void ReturnsDefaultValueOnProperty()
-		{
-			var mock = new Mock<IFoo>();
-			mock.SetReturnsDefault(int.MinValue);
-
-			Assert.Equal(int.MinValue, mock.Object.Value);
-		}
-
-		[Fact]
 		public void ReturnsValueFromBaseMethod()
 		{
 			var mock = new Mock<Foo>();
@@ -241,10 +305,6 @@ namespace Moq.Tests
 			string Execute(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6);
 			string Execute(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7);
 			string Execute(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8);
-			bool ReturnBool();
-			IList<int> ReturnIntList();
-
-			int Value { get; set; }
 		}
 
 		public class Foo

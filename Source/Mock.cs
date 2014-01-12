@@ -59,6 +59,7 @@ namespace Moq
         private DefaultValue defaultValue = DefaultValue.Empty;
         private IDefaultValueProvider defaultValueProvider = new EmptyDefaultValueProvider();
         private readonly Dictionary<MethodInfo, Mock> innerMocks;
+        private IDefaultValueProvider customValueProvider = null;
 
         /// <include file='Mock.xdoc' path='docs/doc[@for="Mock.ctor"]/*'/>
         protected Mock()
@@ -678,8 +679,9 @@ namespace Moq
                 return mock.Object;
             }
 
-            IDefaultValueProvider valueProvider = (overrideDefaultProvider ?? this.defaultValueProvider);
-            object initialValue = valueProvider.ProvideDefault(methodInfo);
+            
+            IDefaultValueProvider valueProvider = (overrideDefaultProvider ?? this.customValueProvider ?? this.defaultValueProvider);
+            object initialValue = valueProvider.ProvideDefault(methodInfo);            
 
             var mocked = initialValue as IMocked;
             if (mocked != null)
@@ -979,6 +981,18 @@ namespace Moq
         public void SetReturnsDefault<TReturn>(TReturn value)
         {
             this.defaultValueProvider.DefineDefault(value);
+        }
+
+        /// <include file='Mock.xdoc' path='docs/doc[@for="Mock.SetReturnDefault{provider1}"]/*'/>
+        public void SetReturnsDefault(Func<Type, object> provider)
+        {
+            SetReturnsDefault((_, type) => provider(type));
+        }
+
+        /// <include file='Mock.xdoc' path='docs/doc[@for="Mock.SetReturnDefault{provider2}"]/*'/>
+        public void SetReturnsDefault(Func<Func<object>, Type, object> provider)
+        {
+            customValueProvider = new FuncDefaultValueProvider(() => this.defaultValueProvider, provider);
         }
         #endregion
     }
