@@ -198,13 +198,8 @@ namespace Moq
 
 			info.ReturnType.ThrowIfNotMockeable();
 
-			Mock fluentMock;
-			if (!mock.InnerMocks.TryGetValue(info, out fluentMock))
-			{
-				fluentMock = ((IMocked)new MockDefaultValueProvider(mock).ProvideDefault(info)).Mock;
-				Mock.SetupAllProperties(fluentMock);
-			}
-
+		    const bool setupAllProperties = true;
+		    Mock fluentMock = ((IMocked) mock.ProvideDefault(info, setupAllProperties, new MockDefaultValueProvider(mock))).Mock;
 			var result = (TResult)fluentMock.Object;
 
 			mock.Setup(setup).Returns(result);

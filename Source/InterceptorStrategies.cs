@@ -13,16 +13,8 @@ namespace Moq
         {
 			if (invocation.Method != null && invocation.Method.ReturnType != null &&
                     invocation.Method.ReturnType != typeof(void))
-            {
-                Mock recursiveMock;
-                if (ctx.Mock.InnerMocks.TryGetValue(invocation.Method, out recursiveMock))
-                {
-                    invocation.ReturnValue = recursiveMock.Object;
-                }
-                else
-                {
-                    invocation.ReturnValue = ctx.Mock.DefaultValueProvider.ProvideDefault(invocation.Method);
-                }
+			{
+                invocation.ReturnValue = ctx.Mock.ProvideDefault(invocation.Method);
                 return InterceptionAction.Stop;
             }
             return InterceptionAction.Continue;

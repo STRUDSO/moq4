@@ -58,12 +58,13 @@ namespace Moq
         private bool callBase;
         private DefaultValue defaultValue = DefaultValue.Empty;
         private IDefaultValueProvider defaultValueProvider = new EmptyDefaultValueProvider();
+        private readonly Dictionary<MethodInfo, Mock> innerMocks;
 
         /// <include file='Mock.xdoc' path='docs/doc[@for="Mock.ctor"]/*'/>
         protected Mock()
         {
             this.ImplementedInterfaces = new List<Type>();
-            this.InnerMocks = new Dictionary<MethodInfo, Mock>();
+            this.innerMocks = new Dictionary<MethodInfo, Mock>();
         }
 
         /// <include file='Mock.xdoc' path='docs/doc[@for="Mock.Get"]/*'/>
@@ -164,8 +165,6 @@ namespace Moq
 
         internal virtual Interceptor Interceptor { get; set; }
 
-        internal virtual Dictionary<MethodInfo, Mock> InnerMocks { get; private set; }
-
         /// <include file='Mock.xdoc' path='docs/doc[@for="Mock.OnGetObject"]/*'/>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "This is actually the protected virtual implementation of the property Object.")]
         protected abstract object OnGetObject();
@@ -188,18 +187,7 @@ namespace Moq
         /// must be performed on the mock, without causing unnecessarily early initialization of 
         /// the mock instance, which breaks As{T}.
         /// </summary>
-        internal abstract bool IsDelegateMock { get; }
-
-        /// <summary>
-        /// Specifies the class that will determine the default 
-        /// value to return when invocations are made that 
-        /// have no setups and need to return a default 
-        /// value (for loose mocks).
-        /// </summary>
-        internal IDefaultValueProvider DefaultValueProvider
-        {
-            get { return this.defaultValueProvider; }
-        }
+        internal abstract bool IsDelegateMock { get; }    
 
         /// <summary>
         /// Exposes the list of extra interfaces implemented by the mock.
@@ -215,7 +203,7 @@ namespace Moq
             try
             {
                 this.Interceptor.Verify();
-                foreach (var inner in this.InnerMocks.Values)
+                foreach (var inner in this.innerMocks.Values)
                 {
                     inner.Verify();
                 }
@@ -238,7 +226,7 @@ namespace Moq
             try
             {
                 this.Interceptor.VerifyAll();
-                foreach (var inner in this.InnerMocks.Values)
+                foreach (var inner in this.innerMocks.Values)
                 {
                     inner.VerifyAll();
                 }
@@ -674,18 +662,37 @@ namespace Moq
                 foreach (var property in properties)
                 {
                     var expression = GetPropertyExpression(mockType, property);
-                    var initialValue = mock.DefaultValueProvider.ProvideDefault(property.GetGetMethod());
-
-                    var mocked = initialValue as IMocked;
-                    if (mocked != null)
-                    {
-                        SetupAllProperties(mocked.Mock);
-                    }
+                    var initialValue = mock.ProvideDefault(property.GetGetMethod(), setupAllProperties:true);
 
                     method.MakeGenericMethod(property.PropertyType)
                         .Invoke(mock, new[] { expression, initialValue });
                 }
             });
+        }
+
+        internal object ProvideDefault(MethodInfo methodInfo, bool setupAllProperties = false, IDefaultValueProvider overrideDefaultProvider = null)
+        {
+            Mock mock;
+            if (this.innerMocks.TryGetValue(methodInfo, out mock))
+            {
+                return mock.Object;
+            }
+
+            IDefaultValueProvider valueProvider = (overrideDefaultProvider ?? this.defaultValueProvider);
+            object initialValue = valueProvider.ProvideDefault(methodInfo);
+
+            var mocked = initialValue as IMocked;
+            if (mocked != null)
+            {
+                this.innerMocks.Add(methodInfo, mocked.Mock);
+
+                if (setupAllProperties)
+                {
+                    SetupAllProperties(mocked.Mock);
+                }
+            }
+
+            return initialValue;
         }
 
         private static Expression GetPropertyExpression(Type mockType, PropertyInfo property)
@@ -971,10 +978,8 @@ namespace Moq
         /// <include file='Mock.Generic.xdoc' path='docs/doc[@for="Mock.SetReturnDefault{TReturn}"]/*'/>
         public void SetReturnsDefault<TReturn>(TReturn value)
         {
-            this.DefaultValueProvider.DefineDefault(value);
+            this.defaultValueProvider.DefineDefault(value);
         }
-
         #endregion
-
     }
 }

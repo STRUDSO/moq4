@@ -55,11 +55,6 @@ namespace Moq
 			this.owner = owner;
 		}
 
-		internal override Dictionary<MethodInfo, Mock> InnerMocks
-		{
-			get { return this.owner.InnerMocks; }
-		}
-
 		internal override Interceptor Interceptor
 		{
 			get { return this.owner.Interceptor; }
